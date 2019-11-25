@@ -23,39 +23,93 @@
 # Was the report done in Rmd (knitr)?
 
 library(dplyr)
+library(car)
 data("mtcars")
 str(mtcars)
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("Automatic", "Manual")
 cars <- mtcars
 
 # Transforming the variables in factors
 # 0 = automatic, 1 = manual
-cars$am <- factor(cars$am, levels = c(0,1))
+#cars$am <- factor(cars$am, levels = c(0,1))
 str(cars)
+cor(mtcars)[1,]
 pairs(cars)
 
-fitall <- lm(mpg ~ factor(am) + . -1, data=cars)
-plot(fitall$residuals)
-summary(fitall)
+fit0 <- lm(mpg ~ factor(am), data=cars)
+tcritical <- qt(0.975, fit0$df)
+print(paste("Critical t value at 95% of confidence to reject null hypothesis :", round(tcritical, 3)))
+summary(fit0)
 
-plot(x=cars$am, y=cars$mpg)
-fit1 <- lm (mpg ~ factor(am) -1, data = cars)
-plot(fit1$residuals)
+#fitall <- lm(mpg ~ factor(am) + cyl + disp + hp + drat + wt + qsec + factor(vs) + factor(gear) + factor(carb), data=cars)
+fitall <- lm(mpg ~ ., data=cars)
+summary(fitall)$adj.r.squared
 
-fit2 <- lm (mpg ~ factor(am) + wt -1, data = cars)
-summary(fit2)
-plot(fit2$residuals)
+alias(fitall)
+sqrt(vif(fitall))
 
-fit3 <- lm (mpg ~ factor(am) + wt + hp -1, data = cars)
-plot(fit3$residuals)
-summary(fit3)
+fit1 <- lm(mpg ~ factor(am) + wt, data=cars)
+vif(fit1)
+summary(fit1)$adj.r.squared
 
-fit4 <- lm (mpg ~ factor(am) + wt + hp + disp -1, data = cars)
-plot(fit4$residuals)
-summary(fit4)
+fit2 <- lm(mpg ~ factor(am) + wt + hp, data=cars)
+vif(fit2)
+summary(fit2)$adj.r.squared
 
-fit5 <- lm (mpg ~ factor(am) + wt + drat -1, data = cars)
-plot(fit5$residuals)
-summary(fit5)
+# A inclusão do preditor disp não melhorou o desempenho 
+fit3 <- lm(mpg ~ factor(am) + wt + hp + disp, data=cars)
+vif(fit3)
+summary(fit3)$adj.r.squared
 
-anova(fit1,fit2,fit3,fit4,fit5, fitall)
 
+fit4 <- lm(mpg ~ factor(am) + wt + hp + cyl, data=cars)
+vif(fit4)
+summary(fit4)$adj.r.squared
+tcritical <- qt(0.975, fit4$df)
+
+
+# Since disp and HP seens to be very correlated to Disp and Cyl they will be 
+# removed from the model.
+# Also, the variable carb look very inflated by the other, suggesting noise to the model
+
+# fit1 <- lm(mpg ~ factor(am) + hp + drat + wt  + factor(vs) + factor(gear) , data=cars)
+# vif(fit1)
+# summary(fit1)
+# 
+# # Predictor gear seens to be inflated by the other one and will be removed
+# fit2 <- lm(mpg ~ factor(am) + hp + drat + wt  + factor(vs) , data=cars)
+# vif(fit2)
+# summary(fit2)
+# 
+# 
+# 
+# anova(fit0,fit2)
+# 
+# 
+# 
+# fit3 <- lm(mpg ~ factor(am) + hp + wt  + factor(vs) , data=cars)
+# vif(fit3)
+# summary(fit3)
+# 
+# 
+# # fit2 <- lm(mpg ~ factor(am) + cyl + disp + hp + drat + wt  + factor(vs) + factor(gear) , data=cars)
+# # vif(fit2)
+# # summary(fit2)
+# # 
+# # fit3 <- lm(mpg ~ factor(am) + cyl + disp + hp + drat + wt  + factor(vs), data=cars)
+# # vif(fit3)
+# # summary(fit2)
+# # 
+# # fit4 <- lm(mpg ~ factor(am) +  disp + hp +  wt  + factor(vs) + factor(gear) , data=cars)
+# # vif(fit4)
+# # summary(fit2)
+# 
+# 
+# 
+# 
+# 
+# # data(SALARY)
+# # M <- lm(salary~.,data=salary)
+# # VIF(M)
+# 

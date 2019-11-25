@@ -1,0 +1,165 @@
+---
+title: "Regression Model"
+author: "Luiz Bergo"
+date: "24/11/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(car)
+```
+
+## Summary
+
+This is a project assignment as per request to complete the Regression Model course from Johns Hopkins University powered by Coursera. The main idea is to analyse the ***mtcars*** dataset provided in R Packages and answer the question that raised:
+
+ **“Is an automatic or manual transmission better for MPG?”**
+ 
+ Also is asked to  "Quantify the MPG difference between automatic and manual transmissions".
+
+At the following ssesions the data is discussed to properly answer the question.
+
+
+## Exploratory Data Analysis
+
+The **mtcars** dataset is composed for 32 samples and 11 variables. 
+
+```{r data}
+data("mtcars")
+head(mtcars)
+dim(mtcars)
+
+```
+
+The idea is to predict the influence of type of transmission (automatic or manual) in the fuel consumption **mpg** (Miles/(US) gallon). The remaining variable are descripted as follow:
+
+**cyl**	- Number of cylinders  
+**disp** -	Displacement (cu.in.)  
+**hp** - 	Gross horsepower  
+**drat** -	Rear axle ratio  
+**wt**	- Weight (1000 lbs)  
+**qsec** - 1/4 mile time  
+**vs**	- Engine (0 = V-shaped, 1 = straight)  
+**am**	- Transmission (0 = automatic, 1 = manual)  
+**gear**	- Number of forward gears  
+**carb**	- Number of carburetors  
+
+Correlation of outcome with possible predictors:
+
+```{r}
+cor(mtcars)[1,]
+```
+
+A comparison between the variables are depicted in the **Appendix**.
+
+## Model Adjustment
+
+The first idea is to evaluate fuel consumption acording to the transmisison.
+
+```{r transmission_plo}
+cars <- mtcars
+cars$am <- as.factor(cars$am)
+levels(cars$am) <- c("Automatic", "Manual")
+
+boxplot(mpg~am, data = cars, main = "Fuel consumption for type of transmission",
+        col=c("red","blue"), xlab = "Transmission",ylab = "Consumption - (Miles/(US) gallon)")
+
+
+fit0 <- lm(mpg ~ factor(am), data=cars)
+tcritical <- qt(0.975, fit0$df)
+print(paste("Critical t value at 95% of confidence to reject null hypothesis :", round(tcritical, 3)))
+summary(fit0)
+```
+
+
+The t-values for coeficients are greater than $t_c$ so it is validy assume some correlation between the variables and transmission explain about **34%** of variance at fuel comsuption. This lead us to interpret that **manual transmission cars** tend to consume less than **automatic**.
+
+Considering that only **34%** of variation is explained for this model some other variables may be included for a better understandig. Such variation can either be observed in the plot of residuals.
+
+```{r residual_fit0}
+plot(fit0$residuals, main = "Residual plot from the first model")
+```
+
+The first approach is to evaluate a linear fit including all the variables available as predictors.
+
+```{r fit_all}
+fitall <- lm(mpg ~ ., data=cars)
+summary(fitall)
+plot(fitall$residuals, main = "Residual plot for complete model")
+```
+
+The model including all variables change has a better result than the first model with just **am** (transmition) as a predictor with about **81%** of variance explained.
+
+Although it is possible to observe a high variation inflation, suggesting the model can be simplified.
+
+```{r}
+vif(fitall)
+```
+
+Observing the plot and correlation between variables depicted at the *Appendix* it is possible to propose new fits observing that onde more correlated to mpg.
+
+```{r}
+fit1 <- lm(mpg ~ factor(am) + wt, data=cars)
+vif(fit1)
+summary(fit1)$adj.r.squared
+```
+With this model **74%** of variance is explained.
+
+To improve the model the **hp** predictor was included and the variance explained is **82%**, better than the model with all the predictors.
+
+```{r}
+fit2 <- lm(mpg ~ factor(am) + wt + hp, data=cars)
+vif(fit2)
+summary(fit2)$adj.r.squared
+```
+
+Other predictors were tested aiming increase in the adjusted R square factor, and the final model includes **am**, **wt**, **hp** and **cyl** as predictors and the variance explained is **83%**.
+
+A caveat is the variance inflation observed in the **hp** predictor since it is very correlated to **cyl** predictor.
+
+```{r}
+fit3 <- lm(mpg ~ factor(am) + wt + hp + cyl, data=cars)
+vif(fit3)
+summary(fit3)$adj.r.squared
+```
+
+It´s worthy to note the residual plot is quite near from that obtained using all the predictors.
+
+
+```{r}
+plot(fit3$residuals, main = "Residual plot for final model")
+
+par(mfrow = c(2,2))
+plot(fit3)
+```
+
+
+The coeficients for the final model are:
+
+```{r}
+summary(fit3)$coef
+```
+
+## Conclusion
+
+The confidence interval for the coeeficients are:
+
+```{r}
+confint(fit3)
+```
+
+Suposing the same values for predictors **wt**, **hp** and **cyl**, manual cars are at average **4%** more economic than automatic cars.
+
+Based on the final model it´s possible to conclude that cars with manual transmition are slightly economic than automatic car, so they are a better regarding this aspect. 
+
+## Apendix
+
+```{r}
+
+pairs(cars)
+```
+
